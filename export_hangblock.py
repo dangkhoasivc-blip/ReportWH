@@ -320,9 +320,16 @@ def run():
         json.dump(payload, f, ensure_ascii=False, separators=(",", ":"))
 
     size_kb = os.path.getsize(OUTPUT_JSON) / 1024
-    print()
-    print("=" * 62)
-    log(f"[OK] Da xuat: {OUTPUT_JSON}  ({size_kb:,.1f} KB)")
+    
+    # Upload to Firebase
+    try:
+        from utils_firebase import upload_to_firebase
+        print("\nUploading to Firebase...")
+        upload_to_firebase('data_hangblock', payload)
+    except ImportError:
+        print("\n(Firebase utility not found, skipping upload)")
+
+    print(f"\n[OK] Xuất thành công: {OUTPUT_JSON} ({size_kb:.1f} KB)")
     print("=" * 62)
 
 

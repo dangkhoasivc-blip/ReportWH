@@ -7,24 +7,26 @@
 // file      : tên file JSON dữ liệu
 // arrayKey  : key chứa mảng dòng dữ liệu trong JSON
 // prefix    : tiền tố tên file CSV khi export
+const DB_BASE = 'https://bc-kho-default-rtdb.asia-southeast1.firebasedatabase.app/';
+
 const REPORTS = [
   { id:'bc1', idx:'01', name:'Hàng Gửi C1',
     desc:'Dashboard hàng gửi C1 theo kho & Tcos (chọn ngày)',
     icon:'fa-truck-ramp-box', ready:true,
-    file:'data/bc01/manifest.json', arrayKey:'tcosRows', prefix:'BC01_HangGuiC1',
+    file: DB_BASE + 'bc01_manifest.json', arrayKey:'tcosRows', prefix:'BC01_HangGuiC1',
     multiDate: true },
   { id:'bc2', idx:'02', name:'Hàng Gần Hết Hạn Sử Dụng',
     desc:'Mã hàng có % HSD còn lại cần theo dõi (QĐ49)',
     icon:'fa-hourglass-half', ready:true,
-    file:'data.json', arrayKey:'shelfLife', prefix:'BC02_HangGanHetHan' },
+    file: DB_BASE + 'data.json', arrayKey:'shelfLife', prefix:'BC02_HangGanHetHan' },
   { id:'bc3', idx:'03', name:'Hàng Block',
     desc:'Hàng bị khoá không cho xuất (D: hư hỏng / R: bị từ chối)',
     icon:'fa-lock', ready:true,
-    file:'data_hangblock.json', arrayKey:'hangBlock', prefix:'BC03_HangBlock' },
+    file: DB_BASE + 'data_hangblock.json', arrayKey:'hangBlock', prefix:'BC03_HangBlock' },
   { id:'bc4', idx:'04', name:'Thời Hạn Hợp Đồng',
     desc:'Theo dõi hạn hợp đồng dịch vụ theo kho (On-Going/NearExpiry/Expired)',
     icon:'fa-file-contract', ready:true,
-    file:'data_hopdong.json', arrayKey:'hopDong', prefix:'BC04_ThoiHanHopDong' },
+    file: DB_BASE + 'data_hopdong.json', arrayKey:'hopDong', prefix:'BC04_ThoiHanHopDong' },
   { id:'bc5', idx:'05', name:'Báo Cáo 5', desc:'Chờ dữ liệu', icon:'fa-file-lines', ready:false },
   { id:'bc6', idx:'06', name:'Báo Cáo 6', desc:'Chờ dữ liệu', icon:'fa-file-lines', ready:false },
 ];
@@ -90,17 +92,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 async function loadAllData() {
-  const isFile = window.location.protocol === 'file:';
-
   for (const cfg of REPORTS.filter(r => r.ready)) {
     let json = null;
-    if (!isFile) {
-      try {
-        const res = await fetch(cfg.file);
-        if (res.ok) json = await res.json();
-      } catch (err) {
-        console.warn(`Không tải được ${cfg.file}:`, err);
-      }
+    try {
+      const res = await fetch(cfg.file);
+      if (res.ok) json = await res.json();
+    } catch (err) {
+      console.warn(`Không tải được ${cfg.file}:`, err);
     }
 
     // BC01 multiDate: load manifest, then load latest date's data
@@ -108,8 +106,12 @@ async function loadAllData() {
       BC01_DATES.manifest = json;
       BC01_DATES.current = json.latest;
       if (json.latest) {
-        const dateFile = json.dates.find(d => d.dateKey === json.latest)?.file;
-        if (dateFile && !isFile) {
+        let dateFile = json.dates.find(d => d.dateKey === json.latest)?.file;
+        if (dateFile) {
+          // dateFile is e.g. "data/bc01/hangguic1_20260821.json"
+          // We map it to Firebase DB URL
+          const filename = dateFile.split('/').pop().replace('.json', '');
+          dateFile = DB_BASE + 'bc01_' + filename + '.json';
           try {
             const r2 = await fetch(dateFile);
             if (r2.ok) json = await r2.json();
@@ -1254,7 +1256,9 @@ async function switchBC01Date(dateKey) {
   const entry = BC01_DATES.manifest?.dates.find(d => d.dateKey === dateKey);
   if (!entry) return;
   try {
-    const res = await fetch(entry.file);
+    const filename = entry.file.split('/').pop().replace('.json', '');
+    const dateFile = DB_BASE + 'bc01_' + filename + '.json';
+    const res = await fetch(dateFile);
     if (!res.ok) throw new Error('Fetch failed');
     const json = await res.json();
     STORE['bc1'] = json;
