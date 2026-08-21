@@ -1,0 +1,11 @@
+{
+  "dates": [
+    {
+      "dateKey": "20260821",
+      "reportDate": "21/08/2026",
+      "total": 1313401,
+      "file": "data/bc01/hangguic1_20260821.json"
+    }
+  ],
+  "latest": "20260821"
+}
